@@ -1,0 +1,213 @@
+2、解压安装包
+
+解压下载的安装包，放到你的电脑路径，我放置的是E:\mysql
+
+ 
+
+3、配置my.ini文件
+
+解压后，根目录下，有一个my-default.ini文件，这是官方的配置文件样版，
+
+我们把这个文件拷贝一份在同一个目录，名字改为my.ini（编码格式必须是ANSI格式，其他的UTF-8等不能使用）
+
+用txt打开编辑，把原本的说明内容清空，修改后如下：（再次说明，这是从参考网址拷贝的）
+
+[mysql]
+
+#设置mysql客户端默认字符集
+
+default-character-set=utf8
+
+[mysqld]
+
+#设置3306端口
+
+port = 3306 
+
+#设置mysql的安装目录
+
+basedir=E:\mysql5.7
+
+#设置mysql数据库的数据的存放目录
+
+datadir=E:\mysql5.7\data
+
+#允许最大连接数
+
+max_connections=200
+
+#服务端使用的字符集默认为8比特编码的latin1字符集
+
+character-set-server=utf8
+
+#创建新表时将使用的默认存储引擎
+
+explicit_defaults_for_timestamp=true
+
+default-storage-engine=INNODB 
+
+ 
+
+修改完，保存退出。
+
+ 
+
+4、安装mysql
+
+以管理员身份打开cmd窗口，到C:\windows\system32\cmd.exe 找到cmd程序，（以下的全部cmd命令操作，最好都以管理员身份打开）
+
+通过　　E:
+
+　　　　cd mysql
+
+　　　　cd bin
+
+这三步进入mysql的bin目录，
+
+输入命令：mysqld install
+
+等待提示安装成功后，
+
+输入命令：mysqld --initialize ，这一步用于初始化data目录，官方的压缩包解压后并没有data文件夹，运行命令后，自动在根目录下生成data文件夹
+
+ 
+
+最后，输入命令：net start mysql ，启动服务。
+
+ 
+
+5、设置root管理员密码
+
+新版本的mysql，root用户的密码不能为空，这时，我们的root是没有密码的，因此我们需要设置。
+
+win+R，输入services.msc，打开服务，找到MySQL服务，关闭它。
+
+然后打开cmd，输入命令：
+
+　　E:
+
+　　cd mysql
+
+　　cd bin
+
+　　mysqld --defaults-file="E:\mysql\my.ini" --console --skip-grant-tables
+
+这是打开mysql的安全模式。（这个cmd别关）
+
+另外再打开一个cmd，输入命令：
+
+　　E:
+
+　　cd mysql
+
+　　cd bin
+
+　　mysql -u root -p
+
+此时cmd显示Enter password：
+
+直接敲Enter键，成功进入mysql
+
+ 
+
+输入sql语句如下：
+
+use mysql;　　显示Database changed
+
+update user set authentication_string=password("123") where user="root";　　显示：Query OK,1 rows affected(0.01 sec) Rows matched:1 Changed:1 Warnings:1
+
+flush privileges;　　显示：Query OK,0 rows affected (0.00 sec)
+
+quit
+
+完成，这样就把root用户的密码设置为123了。 
+
+ 
+
+最后，为了以后方便启动mysql，配置环境变量
+
+Path追加：;E:\mysql\bin;
+
+ 
+
+完成，以后运行mysql的方法，就是打开cmd，输入命令：
+
+　　mysql -u root -p
+
+　　123
+
+就可以了。
+
+ 
+
+6、第一次运行后，设定常用参数：
+
+1）登录后，需要在正常模式下，再设一次root用户的密码，输入：set password=password('123');
+
+2）打开root操作数据库的全部权限：
+
+　　use mysql;
+
+　　show tables;
+
+　　select host,user from user;
+
+　　update user set host='%' where user='root';
+
+　　quit
+
+　　net stop mysql(注意服务名称区分大小写)
+
+　　net start mysql(注意服务名称区分大小写)
+  
+  碰到问题地解决方法
+  问题解决
+这几天安装MYSQL 5.7版本的时候，出现了服务无法启动的问题，尝试了各种修改配置文件my.ini的方法都不行，查看到错误日志，一般错误日志在C:\Program Files\MySQL\MySQL Server 5.7\data\xxx.err,其中看到错误提示为：
+
+2017-05-03T17:14:56.155066Z 0 [ERROR] InnoDB: .\ibdata1 must be writable
+2017-05-03T17:14:56.155066Z 0 [ERROR] InnoDB: The system tablespace must be writable
+2017-05-03T17:14:56.375466Z 0 [ERROR] Plugin 'InnoDB' init function returned error.
+2017-05-03T17:14:56.375466Z 0 [ERROR] Plugin 'InnoDB' registration as a STORAGE ENGINE failed.
+2017-05-03T17:14:56.375466Z 0 [ERROR] Unknown/unsupported storage engine: InnoDB
+2017-05-03T17:14:56.375466Z 0 [ERROR] Aborting
+1
+2
+3
+4
+5
+6
+MYSQL没有权限写入.\ibdata1文件，使用管理者取得该文件的权限后也没有效果，偶然看到有位大佬的修改方法：
+
+解决方法： 
+1、打开任务管理器终止mysqld进程； 
+2、打开mysql安装目录的data文件夹，删除以下2个文件：ib_logfile0和ib_logfile1 
+3、重新启动mysql
+
+成功解决服务无法启动的问题，但是为什么可以这样解决呢，大佬没有给出解释，接下来几天要好好看看MYSQL文件的用途，试试看能不能给个解释
+
+原因分析
+MySQL 文件结构
+MySQL文件包括MySQL所建数据库文件和MySQL所用引擎创建的数据库文件。 
+.frm 文件与操作系统和数据库引擎无关，都有这么个与表名同名文件。
+
+MyISAM引擎的文件：
+
+.myd 即 my data，表数据文件
+.myi 即my index，索引文件
+.log 日志文件。
+InnoDB引擎的文件：
+
+采用表空间（tablespace）来管理数据，存储表数据和索引，
+InnoDB数据库文件（即InnoDB文件集，ib-file set）：
+ibdata1、ibdata2等：系统表空间文件，存储InnoDB系统信息和用户数据库表数据和索引，所有表共用。
+.ibd文件：单表表空间文件，每个表使用一个表空间文件（file per table），存放用户数据库表数据和索引。
+Redo日志文件： ib_logfile0、ib_logfile1
+MySQL社区手册
+
+MySQL INNODB启动配置
+The directory path to the InnoDB redo log files, whose number is specified by innodb_log_files_in_group. If you do not specify any InnoDB log variables, the default is to create two files named ib_logfile0 and ib_logfile1 in the MySQL data directory. Log file size is given by the innodb_log_file_size system variable.（参考）
+
+InnoDB 在启动时需要配置LOG File的目录，如果没有制定目录，则会在MySQL Data目录下创建2个日志文件ib_logfile0 and ib_logfile1，在创建的时候需要确保MYSQL拥有对该目录的权限。
+
+方案解释
+原来的文件不是MYSQL生成，MYSQL 没有相应的权限，但是删除后，后来MYSQL自己新建的文件，能够保持权限？？？需要验证
